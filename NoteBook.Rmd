@@ -1,0 +1,357 @@
+---
+title: "NoteBook Perceptron KNN Perros Gatos"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##### Realizado por:
+
+- **Nestor Jardany Serrano Rojas**, [GitHub](https://github.com/jardanys/Saber_11_AreaTemporal)
+
+<br/>
+
+
+## Perceptron para Sexo ~ Peso + Estatura
+
+<div class=text-justify>
+
+En Machine Learning es un algoritmo capaz de generar un criterio para seleccionar un sub-grupo a partir de un grupo de componentes más grande. Para este capitulo del NoteBook se utiliza una base de datos muestra con diferentes variables sociodemográficas como **Edad**, **Peso**, **Estatura**, tomadas de un grupo de estudiantes. Para determinar el genero a partir de la estatura y peso.
+
+Es necesario normalizar o estandarizar las variables con el fin de tener una mejor clasificación del algoritmo y análisis de los resultados. También se asignan valores de **1** para el la variable [Sexo]=Masculino y **0** para [Sexo]=Femenino.
+</div>
+```{r data}
+X <- readRDS("X.rds")
+X[,c(2:3)] <- X[,c(2,3)]/100
+X$G <- substr(X$Sexo, 1, 1)
+X$g <- as.numeric(X$G=="M")
+X$Uno <- 1
+```
+
+<br/>
+<div class=text-justify>
+
+Se crea una función llamada f para asignar el valor de **1** si un valor de x es mayor a cero o **0** sino una valor de x no es mayor a 0. La variable [l] es el número de filas o registros del archivo.
+</div>
+```{r f}
+f <- function(x){
+  if(x>0) return(1)
+  return(0)
+}
+
+l <- nrow(X)
+```
+
+
+<br/>
+<div class=text-justify>
+
+El objetivo del ejercicio es clasificar la variable [Sexo] a partir de las variables [Peso] y [Estatura]. A continuación se muestra gráficamente la distribución de [Sexo] a partir de los valores de las otras variables.
+</div>
+```{r pressure, echo=FALSE}
+library(ggplot2)
+ggplot(X, aes(x = Estatura, y = Peso)) + 
+        geom_point(aes(colour=Sexo, shape=Sexo), size = 3) +
+        xlab("Estatura") + 
+        ylab("Peso") + 
+        ggtitle("Sexo vs Estatura & Peso")
+```
+
+<br/>
+
+```{r w, echo=FALSE}
+w <- c(0,0,0) #Estatura, Peso, Ind
+done <- FALSE
+iter <- 0
+max.iter <- 10000
+a <- 1
+b <- 1
+z <- c(10,10,10,10)
+names(z) <- c("iter", "a", "b", "err")
+err <- 0
+```
+<br/>
+
+A continuación se muestra el algoritmo del perceptron, se escoge la linea que mejor representa los datos:
+
+```{r while, echo=TRUE}
+plot(X$Estatura, X$Peso, type = "n", xlab="Estatura", ylab="Peso",asp=1, main="Sexo ~ Peso + Estatura")
+cols <- rep("blue",nrow(X))
+cols[which(X$G=="M")] <- "black"
+text(X$Estatura, X$Peso, X$G, col=cols)
+
+while(!done){
+  ind <- sample(1:l,1)
+  h <- f(sum(w*X[ind,c(2,3,9)]))
+  w <- w + (X$g[ind] - h) * unlist(X[ind,c(2,3,9)])
+  a <- -w[3]/w[2]
+  b <- -w[1]/w[2]
+  rr <- NULL
+  for(i in 1:l){
+    r <- ifelse((X[i,3] < X[i,2]*b + a & X[i,8] == 0) | (X[i,3] > X[i,2]*b + a & X[i,8] == 1),1,0)
+    rr <- rbind(rr, r)
+    err <- 1 - sum(rr)/l
+  }
+  z <- rbind(z, c(iter, a, b, err))
+  iter <- iter + 1
+  if(iter >= max.iter) done <- TRUE
+}
+
+iter_err_min <- order(z[,4], decreasing = F)[1]
+abline(z[iter_err_min,2],z[iter_err_min,3],col="black",lwd=2)
+zz <- as.data.frame(z[-1,])
+```
+<br/>
+<div class=text-justify>
+
+Se realizaron 1,000 iteraciones y se escoge la número 305 en la siguiente gráfica se observan los errores de clasificación de todas las iteraciones:
+</div>
+```{r pressure1, echo=FALSE}
+ggplot(zz, aes(iter, err)) +
+  geom_point(shape=err, color="green", size = 3) +
+  xlab("Iteraciones") + 
+  ylab("Error de clasificación") + 
+  ggtitle("Error de Clasificación")
+
+```
+<br/>
+
+## Perceptron para Peso ~ Edad + Estatura
+<div class=text-justify>
+
+Para este capitulo del NoteBook se utiliza una base de datos muestra con diferentes variables sociodemográficas como **Edad**, **Peso**, **Estatura**, tomadas de un grupo de estudiantes. Para determinar si las personas tienen un peso superior a media a partir de la edad y estatura.
+
+Se asignan valores de **1** para el la variable [Peso] >= mean(Peso) y **0** para [Peso] < mean(Peso).
+
+El objetivo del ejercicio es clasificar la variable [Peso] a partir de las variables [Edad] y [Estatura]. A continuación se muestra gráficamente la distribución de [Peso] a partir de los valores de las otras variables.
+</div>
+```{r data_MeanPeso, echo=FALSE}
+X$G <- as.numeric(X$Peso>=mean(X$Peso))
+X$Uno <- 1
+X$Peso_class <- ifelse(X$G==1, "Peso Mayor a la Media", "Peso Menor a la Media")
+```
+<br/>
+
+```{r pressure10, echo=FALSE}
+ggplot(X, aes(x = Estatura, y = Edad)) + 
+        geom_point(aes(colour=Peso_class, shape=Peso_class), size = 3) +
+        xlab("Estatura") + 
+        ylab("Edad") + 
+        ggtitle("Peso vs Estatura & Edad")
+```
+
+<br/>
+
+```{r w10, echo=FALSE}
+w <- c(0,0,0) #Estatura, Peso, Ind
+done <- FALSE
+iter <- 0
+max.iter <- 10000
+a <- 1
+b <- 1
+z <- c(10,10,10,10)
+names(z) <- c("iter", "a", "b", "err")
+err <- 0
+```
+<br/>
+
+A continuación se muestra el algoritmo del perceptron, se escoge la linea que mejor representa los datos:
+
+```{r while10, echo=TRUE}
+while(!done){
+  ind <- sample(1:l,1)
+  h <- f(sum(w*X[ind,c(2,1,9)]))
+  w <- w + (X$g[ind] - h) * unlist(X[ind,c(2,1,9)])
+  a <- -w[3]/w[2]
+  b <- -w[1]/w[2]
+  rr <- NULL
+  for(i in 1:l){
+    r <- ifelse((X[i,1] < X[i,2]*b + a & X[i,7] == 0) | (X[i,1] > X[i,2]*b + a & X[i,7] == 1),1,0)
+    rr <- rbind(rr, r)
+    err <- 1 - sum(rr)/l
+  }
+  z <- rbind(z, c(iter, a, b, err))
+  iter <- iter + 1
+  if(iter >= max.iter) done <- TRUE
+}
+iter_err_min <- order(z[,4], decreasing = F)[4]
+plot(X$Estatura, X$Edad, type = "n", xlab="Estatura", ylab="Edad",  main="Peso ~ Edad + Estatura")
+cols <- rep("blue",nrow(X))
+cols[which(X$G==1)] <- "black"
+text(X$Estatura, X$Edad, X$G, col=cols)
+abline(z[iter_err_min,2],z[iter_err_min,3],col="black",lwd=2)
+zz <- as.data.frame(z[-1,])
+```
+<br/>
+
+Se realizaron 1,000 iteraciones y se escoge la número 305 en la siguiente gráfica se observan los errores de clasificación de todas las iteraciones:
+
+```{r pressure100, echo=FALSE}
+ggplot(zz, aes(iter, err)) +
+  geom_point(shape=err, color="green", size = 3) +
+  xlab("Iteraciones") + 
+  ylab("Error de clasificación") + 
+  ggtitle("Error de Clasificación")
+
+```
+<br/>
+
+
+## KNN (k-nearest neighbors). Sexo ~ Peso + Estatura
+
+Estimación de Sexo a aprtir del peso y estatura.
+
+```{r data_knn, echo=FALSE}
+X$G <- substr(X$Sexo, 1, 1)
+X$g <- as.numeric(X$G=="M")
+```
+<br/>
+
+```{r graf, echo=FALSE}
+ggplot(X, aes(x = Estatura, y = Peso)) + 
+        geom_point(aes(colour=Sexo, shape=Sexo), size = 3) +
+        xlab("Estatura") + 
+        ylab("Peso") + 
+        ggtitle("Sexo vs Estatura & Peso")
+```
+<br/>
+
+Límites de simulación basados en peso y estatura
+
+```{r data_knn_01, echo=TRUE}
+lims <- c(1, 2.5, 0, 1.5)
+nuevopunto <- function(lims=lims){
+  a <- runif(1,lims[1],lims[2])
+  b <- runif(1,lims[3],lims[4])
+  return(c(a, b))
+}
+```
+<br/>
+
+Se gráfica y se muestra el resultado para KNN
+
+con K=1
+
+```{r k1, echo=TRUE}
+k <- 1
+plot(X$Estatura, X$Peso, type = "n", xlab="Estatura", ylab="Peso",asp=1,
+xlim=c(1,2.5),ylim=c(0,1.5))
+cols <- rep("blue",nrow(X))
+cols[which(X$G=="M")] <- "black"
+points(X$Estatura, X$Peso, pch=16, col=cols)
+for(iter in 1:20000){
+  x <- nuevopunto(lims)
+  diss <- dist(rbind(x,X[,c(2,3)]))[1:21]
+  knn <- head(order(diss),k)
+  etiqueta <- names(sort(table(X$G[knn]),decreasing = TRUE))[1]
+  clase <- as.numeric(etiqueta=="M")
+  for(inn in 1:k){
+    if(X$G[knn[inn]]==etiqueta){
+      points(x[1],x[2],col=c("blue","black")[clase+1],pch=20)
+    }
+  }
+}
+
+cols2 <- rep("red",nrow(X))
+cols2[which(X$G=="M")] <- "green"
+points(X$Estatura, X$Peso, pch=16, col=cols2)
+```
+
+<br/>
+
+con K=2
+
+```{r k2, echo=TRUE}
+k <- 2
+plot(X$Estatura, X$Peso, type = "n", xlab="Estatura", ylab="Peso",asp=1,
+xlim=c(1,2.5),ylim=c(0,1.5))
+cols <- rep("blue",nrow(X))
+cols[which(X$G=="M")] <- "black"
+points(X$Estatura, X$Peso, pch=16, col=cols)
+for(iter in 1:20000){
+  x <- nuevopunto(lims)
+  diss <- dist(rbind(x,X[,c(2,3)]))[1:21]
+  knn <- head(order(diss),k)
+  etiqueta <- names(sort(table(X$G[knn]),decreasing = TRUE))[1]
+  clase <- as.numeric(etiqueta=="M")
+  for(inn in 1:k){
+    if(X$G[knn[inn]]==etiqueta){
+      points(x[1],x[2],col=c("blue","black")[clase+1],pch=20)
+    }
+  }
+}
+
+cols2 <- rep("red",nrow(X))
+cols2[which(X$G=="M")] <- "green"
+points(X$Estatura, X$Peso, pch=16, col=cols2)
+```
+<br/>
+
+con K=3
+
+```{r k3, echo=TRUE}
+k <- 3
+plot(X$Estatura, X$Peso, type = "n", xlab="Estatura", ylab="Peso",asp=1,
+xlim=c(1,2.5),ylim=c(0,1.5))
+cols <- rep("blue",nrow(X))
+cols[which(X$G=="M")] <- "black"
+points(X$Estatura, X$Peso, pch=16, col=cols)
+for(iter in 1:20000){
+  x <- nuevopunto(lims)
+  diss <- dist(rbind(x,X[,c(2,3)]))[1:21]
+  knn <- head(order(diss),k)
+  etiqueta <- names(sort(table(X$G[knn]),decreasing = TRUE))[1]
+  clase <- as.numeric(etiqueta=="M")
+  for(inn in 1:k){
+    if(X$G[knn[inn]]==etiqueta){
+      points(x[1],x[2],col=c("blue","black")[clase+1],pch=20)
+    }
+  }
+}
+
+cols2 <- rep("red",nrow(X))
+cols2[which(X$G=="M")] <- "green"
+points(X$Estatura, X$Peso, pch=16, col=cols2)
+```
+
+<br/>
+
+## Caso de Uso Perro & Gatos
+
+Se tiene una base de datos con los pixeles de 198 animales, 99 gatos y 99 perros. Se carga la base y se crea una función para gráficar los animales. A continuación se muestra un ejemplo de un animal de la base.
+
+```{r data_PG, echo=TRUE}
+load("gatosperros.Rdata")
+plotcd <- function(v){
+  x <- matrix(v,64,64)
+  image(1:65,1:65,t(apply(x,2,rev)),asp=1,xaxt="n",yaxt="n",
+        col=grey((0:255)/255),ann=FALSE,bty="n")
+}
+plotcd(dm[sample(1:198,1),])
+```
+<br/>
+
+### PCA - Perros & Gatos
+
+Se realiza un PCA (Clasificación por componentes principales), se puede observar que se tiene el 50% con cuatro componentes y el 80% con el 80% con 27 componentes.
+
+```{r PCA_, echo=TRUE}
+PCA <- prcomp(dm, scale = TRUE)
+plot(cumsum(PCA$sdev^2)/sum(PCA$sdev^2), xlab = "Dimensiones", ylab = "ds", main = "Varianza Acumulada")
+abline(h=0.5, col="blue")
+abline(h=0.8, col="red")
+```
+<br/>
+
+A continuación se muestra en dos componentes la distribución de los perros y gatos.
+
+```{r data_PG_, echo=TRUE}
+dos_dim <- data.frame("Comp1" = PCA$x[,1], "Comp2" = PCA$x[,2])
+dos_dim$animal <- c(rep(1,99), rep(0, 99))
+dos_dim$animal2 <- ifelse(dos_dim$animal==1, "Gato", "Perro")
+ggplot(dos_dim, aes(Comp1, Comp2)) + geom_point(aes(colour=animal2))
+```
+
+
