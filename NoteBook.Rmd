@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ##### Realizado por:
 
-- **Nestor Jardany Serrano Rojas**, [GitHub](https://github.com/jardanys/Saber_11_AreaTemporal)
+- **Nestor Jardany Serrano Rojas**, [GitHub](https://github.com/jardanys/MachineLearning_Perceptron_Knn)
 
 <br/>
 
